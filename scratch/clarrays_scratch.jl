@@ -6,6 +6,4 @@ B = similar(A)
 dA = CLArray(A)
 dB = similar(dA)
 
-dA.ptr
-
 @time dA * dB
