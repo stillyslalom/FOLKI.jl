@@ -2,17 +2,17 @@ using Images, ImageView, TestImages, GtkReactive
 using FileIO, Glob
 using AxisArrays, Unitful
 import Unitful: s, m
+using CLArrays
 
+CLArrays.init(CLArrays.default_device())
 img = testimage("cameraman")
-sz = size(img)
-img2 = AxisArray(cat(3, img, img),
-                        Axis{:y}(linspace(0m,0.1m,sz[1])),
-                        Axis{:x}(linspace(0m,0.1m,sz[2])),
-                        Axis{:img}([:a, :b]))
-img2[0m .. 0.05m, 0m .. 0.07m, :a]
 
+v = CLArray(reinterpret.(channelview(img)))
+@time d2(v)
 
-
+Cfloat.(img)
+dimg = CLArray(Cfloat.(img))
+CartesianRange(indices(img))
 rawdir = normpath((@__DIR__)*"/../raw/piv1B/")
 rawpaths = glob("*tif", rawdir)
 rawimgs = [load(f) for f in rawpaths]
