@@ -1,7 +1,7 @@
 module FOLKI
 using Images, ImageFiltering, Interpolations
 
-medianwindow(img,n) = mapwindow(median!, img, (n,n))
+medianwindow(img,n) = mapwindow(median, img, (n,n))
 """
     u, v = folki(args...)
 
@@ -21,11 +21,13 @@ function folki(I1raw, I2raw; J=3, N=10, mask=trues(I1raw), w=Kernel.gaussian(4))
     U, V = Images.gaussian_pyramid.([zeros(I1), zeros(I2)], J-1, 2, 1.0) #
 
     for j in J:-1:1
-        i1, i2 = P1[j], P2[j]
+        # i2 is overwritten, necessitating a copy to avoid altering inputs
+        i1, i2 = P1[j], copy(P2[j])
         u, v = U[j], V[j]
         np, nq = size(i1)
         iy, ix = imgradients(i1, KernelFactors.ando3)
         itp = interpolate(i2, BSpline(Quadratic(Flat())), OnGrid())
+        extrapolate(itp, zero(eltype(i2)))
         ixx, iyy, ixy = imfilter(ix.*ix, w), imfilter(iy.*iy, w), imfilter(ix.*iy, w)
         d = @. ixx*iyy - ixy^2
 
@@ -38,9 +40,14 @@ function folki(I1raw, I2raw; J=3, N=10, mask=trues(I1raw), w=Kernel.gaussian(4))
             ixt, iyt = imfilter(ix.*didt, w), imfilter(iy.*didt, w)
             @. u = (iyy*ixt - ixy*iyt)/d
             @. v = (ixx*iyt - ixy*ixt)/d
+
+            # Outlier rejection
             invalid = .!(isfinite.(u) .& isfinite.(v))
             u[invalid] = zero(u[1])
             v[invalid] = zero(v[1])
+
+            u595, v595 = quantile(u, [0.05, 0.95]), quantile(v, [0.05, 0.95])
+            
             u .= medianwindow(u,3)
             v .= medianwindow(v,3)
         end
