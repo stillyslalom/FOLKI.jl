@@ -23,31 +23,31 @@ function folki(I1raw, I2raw; J=3, N=10, mask=trues(I1raw), w=Kernel.gaussian(2))
     for j in J:-1:1
         i1, i2 = P1[j], P2[j]
         u, v = U[j], V[j]
-        ni, nj = size(i1)
-        ix, iy = imgradients(i1)
-        itp = interpolate(i2, BSpline(Linear()), OnGrid())
-        i2_warp = copy(i2)
+        np, nq = size(i1)
+        iy, ix = imgradients(i1, KernelFactors.ando3)
+        itp = interpolate(i2, BSpline(Quadratic(Flat())), OnGrid())
         a, b, c = imfilter(ix.*ix, w), imfilter(iy.*iy, w), imfilter(ix.*iy, w)
         d = @. a*b - c*c
 
         for n = 1:N
-            for j = 1:nj, i = 1:ni
-                i2_warp[i,j] = itp[i + u[i,j], j + v[i,j]]
+            for q = 1:nq, p = 1:np
+                i2[p,q] = itp[p + v[p,q], q + u[p,q]]
             end
-            didt = @. u*ix + v*iy + i1 - i2_warp
+            didt = @. u*ix + v*iy + i1 - i2
             g, h = imfilter(ix.*didt, w), imfilter(iy.*didt, w)
             u = (b.*g - c.*h)./d
             v = (a.*h - c.*g)./d
-            u[!isfinite.(u)] = zero(u[1])
-            v[!isfinite.(v)] = zero(v[1])
+            invalid = !(isfinite.(u) & isfinite.(v))
+            u[invalid] = zero(u[1])
+            v[invalid] = zero(v[1])
         end
 
         if j > 1
-            U[j-1] .= imresize(u, size(U[j-1]))
-            V[j-1] .= imresize(v, size(V[j-1]))
+            U[j-1] .= 2*imresize(u, size(U[j-1]))
+            V[j-1] .= 2*imresize(v, size(V[j-1]))
         end
     end
-    return u, v
+    return U, V
 end
 
 end
