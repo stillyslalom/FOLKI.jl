@@ -1,0 +1,212 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\begin_preamble
+\usepackage{physics}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "garamondx" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 0
+\tocdepth 3
+\paragraph_separation skip
+\defskip smallskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Itemize
+Particle image velocimetry background
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+Motivation: determine velocity of fluid within test domain for turbulence
+ statistics, performance characteristics of whatever's to be tested 
+\end_layout
+
+\begin_layout Itemize
+Seed flow with particles small enough to be completely entrained by the
+ flow.
+ Illuminate a planar section of the flow with a dual-pulse burst from a
+ laser sheet, capturing two images in close succession (typically on the
+ order of microseconds-milliseconds apart).
+\end_layout
+
+\begin_layout Itemize
+Became popular in 19xx with the advent of inexpensive scientific cameras
+\end_layout
+
+\begin_layout Itemize
+Traditional PIV algorithms work by dividing the images into a grid of sub-images
+, then finding the inter-image displacements which maximizes the correlation
+ between each pair of sub-images.
+ The velocity is simply the displacement in the x and y directions divided
+ by the time between image acquisitions.
+\end_layout
+
+\begin_layout Itemize
+The simplest method of determining correlations is performing matrix multiplicat
+ion of the sub-image pairs at every possible displacement, but this approach
+ can require several hours of processing time for a single image pair.
+ More sophisticated approaches use a FFT routine to determine correlation
+ (math!)
+\end_layout
+
+\begin_layout Itemize
+To improve the resolution of the output velocity field, PIV algorithms typically
+ overlap the search boxes (graphic here) and recursively decrease the size
+ of the search boxes, using velocity fields from previous iterations to
+ warp the second image 
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Optical flow
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+Computer vision often requires determination of displacement fields between
+ video frames for motion detection or whatever
+\end_layout
+
+\begin_layout Itemize
+Typically less rigorous algorithms than PIV: meant for real-time use with
+ any heavy computation offloaded to graphics cards
+\end_layout
+
+\begin_layout Itemize
+Popular method: Lucas-Kanade optical flow
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+outline
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Adapted for PIV by Frenchies
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+their results
+\end_layout
+
+\end_deeper
+\end_deeper
+\begin_layout Itemize
+Julia image processing & GPU capabilities
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+Julia overview: Matlab-like syntax, but functions are compiled just ahead
+ of runtime instead of being interpreted like Matlab (or Python).
+ Sophisticated type system means it's possible to write fast code even for
+ user-defined types: don't have to stick to float64 arrays for speed.
+\end_layout
+
+\begin_layout Itemize
+Underneath the hood, function call chains are transpiled to LLVM, which
+ can produce fast bytecode for almost any platform
+\end_layout
+
+\begin_layout Itemize
+Thanks to recent efforts by Google to allow transpilation from LLVM to CUDA
+ kernels, it's possible to write CUDA kernels directly in Julia.
+\end_layout
+
+\begin_layout Itemize
+Built-in support for calling C/C++/Fortran libraries
+\end_layout
+
+\begin_layout Itemize
+Bindings to the C API for both CUDA and OpenCL are being developed for Julia
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Implementing FOLKI in Julia
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+It's weird
+\end_layout
+
+\begin_layout Itemize
+Damn tricky
+\end_layout
+
+\begin_layout Itemize
+I got snarled up by implementation details, trying to get realistic vector
+ fields.
+ Requires extensive validation of input parameters and more-sophisticated
+ boundary handling.
+\end_layout
+
+\end_deeper
+\end_body
+\end_document
