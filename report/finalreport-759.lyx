@@ -4,17 +4,19 @@
 \begin_header
 \save_transient_properties true
 \origin unavailable
-\textclass article
+\textclass scrartcl
 \begin_preamble
 \usepackage{physics}
+\addtokomafont{disposition}{\rmfamily}
 \end_preamble
+\options titlepage, abstract=true
 \use_default_options true
 \maintain_unincluded_children false
 \language english
 \language_package default
 \inputencoding auto
 \fontencoding global
-\font_roman "garamondx" "default"
+\font_roman "times" "default"
 \font_sans "default" "default"
 \font_typewriter "default" "default"
 \font_math "auto" "auto"
@@ -29,7 +31,7 @@
 \output_sync 0
 \bibtex_command default
 \index_command default
-\paperfontsize default
+\paperfontsize 11
 \spacing single
 \use_hyperref false
 \papersize default
@@ -74,57 +76,117 @@
 
 \begin_body
 
-\begin_layout Itemize
-Particle image velocimetry background
+\begin_layout Title
+GPU-Accelerated Particle Image Velocimetry
 \end_layout
 
-\begin_deeper
-\begin_layout Itemize
-Motivation: determine velocity of fluid within test domain for turbulence
- statistics, performance characteristics of whatever's to be tested 
+\begin_layout Subject
+ME759 Final Project Report
+\begin_inset Newline newline
+\end_inset
+
+University of Wisconsin-Madison
 \end_layout
 
-\begin_layout Itemize
-Seed flow with particles small enough to be completely entrained by the
- flow.
- Illuminate a planar section of the flow with a dual-pulse burst from a
- laser sheet, capturing two images in close succession (typically on the
- order of microseconds-milliseconds apart).
+\begin_layout Author
+Alex Ames
 \end_layout
 
-\begin_layout Itemize
-Became popular in 19xx with the advent of inexpensive scientific cameras
+\begin_layout Abstract
+lorem ipsum?
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+thispagestyle{empty}
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+clearpage
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+pagenumbering{arabic}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage newpage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Particle image velocimetry
+\end_layout
+
+\begin_layout Standard
+In recent decades, particle image velocimetry has become an invaluable tool
+ for studying the structure and properties of gas and liquid flows.
+ By non-intrusively seeding a flow with a large number of small particles,
+ then tracking the particles' displacement through multiple successive image
+ frames, accurate velocity fields can be obtained.
+ Although the technique was developed in the era of film cameras, with photograp
+hic negatives digitized and then processed, PIV has come into its own with
+ the widespread availability of digital cameras.
+ 
+\end_layout
+
+\begin_layout Standard
 Traditional PIV algorithms work by dividing the images into a grid of sub-images
-, then finding the inter-image displacements which maximizes the correlation
+, then finding the inter-image displacements which maximize the correlation
  between each pair of sub-images.
- The velocity is simply the displacement in the x and y directions divided
- by the time between image acquisitions.
+ The simplest method of determining correlations is performing matrix multiplica
+tion of the sub-image pairs at every possible displacement (with appropriate
+ boundary padding), but this approach can require several hours of processing
+ time for a single image pair.
+ More sophisticated approaches use fast Fourier transform (FFT) routines
+ to determine correlations in a matter of minutes, but the resultant velocity
+ fields exhibit a phenomenon known as peak-locking due to single-pixel particles
+, decreasing their accuracy 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "pust2000piv"
+
+\end_inset
+
+.
+ To improve the resolution of the output velocity field, PIV algorithms
+ typically overlap the search boxes and recursively decrease the searched
+ area, using velocity fields from previous iterations to warp the second
+ image
 \end_layout
 
-\begin_layout Itemize
-The simplest method of determining correlations is performing matrix multiplicat
-ion of the sub-image pairs at every possible displacement, but this approach
- can require several hours of processing time for a single image pair.
- More sophisticated approaches use a FFT routine to determine correlation
- (math!)
-\end_layout
-
-\begin_layout Itemize
-To improve the resolution of the output velocity field, PIV algorithms typically
- overlap the search boxes (graphic here) and recursively decrease the size
- of the search boxes, using velocity fields from previous iterations to
- warp the second image 
-\end_layout
-
-\end_deeper
-\begin_layout Itemize
+\begin_layout Section
 Optical flow
 \end_layout
 
-\begin_deeper
 \begin_layout Itemize
 Computer vision often requires determination of displacement fields between
  video frames for motion detection or whatever
@@ -155,15 +217,17 @@ their results
 \end_layout
 
 \end_deeper
-\end_deeper
-\begin_layout Itemize
+\begin_layout Section
 Julia image processing & GPU capabilities
 \end_layout
 
-\begin_deeper
+\begin_layout Subsection
+Julia overview
+\end_layout
+
 \begin_layout Itemize
-Julia overview: Matlab-like syntax, but functions are compiled just ahead
- of runtime instead of being interpreted like Matlab (or Python).
+Matlab-like syntax, but functions are compiled just ahead of runtime instead
+ of being interpreted like Matlab (or Python).
  Sophisticated type system means it's possible to write fast code even for
  user-defined types: don't have to stick to float64 arrays for speed.
 \end_layout
@@ -186,12 +250,10 @@ Built-in support for calling C/C++/Fortran libraries
 Bindings to the C API for both CUDA and OpenCL are being developed for Julia
 \end_layout
 
-\end_deeper
-\begin_layout Itemize
+\begin_layout Subsection
 Implementing FOLKI in Julia
 \end_layout
 
-\begin_deeper
 \begin_layout Itemize
 Chose to use OpenCL due to its availability on virtually all platforms regardles
 s of whether a GPU is installed
@@ -216,19 +278,69 @@ I got snarled up by implementation details, trying to get realistic vector
 See: some results for several synthetic and real-world PIV images
 \end_layout
 
-\end_deeper
-\begin_layout Itemize
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename /Users/alexames/Dropbox/College/759--finalproject/raw/piv1B/B001_1.tif
+	lyxscale 30
+	width 80col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Synthetic image of particles tracking a strong vortex 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "stanislas2003main"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
 Benchmarking key components
 \end_layout
 
-\begin_deeper
 \begin_layout Itemize
 Per FOLKI iteration, operation counts for:
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-Image re-scaling
+Interpolation
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+Note: Julia support for hardware image interpolation is still under development,
+ per my discussion with the developers: https://github.com/JuliaGPU/OpenCL.jl/issu
+es/28#issuecomment-347974643
 \end_layout
 
 \begin_layout Itemize
@@ -269,15 +381,40 @@ I purchased a external PCI-e enclosure to test GPU acc.eleration using a
 \end_layout
 
 \end_deeper
-\begin_layout Itemize
+\begin_layout Section
 Conclusions
 \end_layout
 
-\begin_deeper
 \begin_layout Itemize
 Well, it's fast and super cool, but kinks need to be worked out.
 \end_layout
 
+\begin_deeper
+\begin_layout Itemize
+To paraphrase, 
+\begin_inset Quotes eld
+\end_inset
+
+make it right, then make it fast
+\begin_inset Quotes erd
+\end_inset
+
+.
+ It isn't correct enough yet to be worth optimizing.
+ Benchmarks of key functions show ____ speedup should be possible.
+\end_layout
+
 \end_deeper
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "bibliography"
+options "IEEEtran"
+
+\end_inset
+
+
+\end_layout
+
 \end_body
 \end_document

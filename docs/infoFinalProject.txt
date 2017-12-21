@@ -1,0 +1,7 @@
+Your First Name: Alex
+Your Last Name: Ames
+The Last four digits of your UW-Madison student ID: 9493
+URL to Final Project GitHub repo (used for grading): https://github.com/stillyslalom/759--finalproject
+Participate in Rescale competition for Surface tablet: Yes
+Name[s] of your Final Project teammates: N/A
+I took care of the course evaluation: No. Sorry!
