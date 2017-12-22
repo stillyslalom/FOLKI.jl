@@ -118,7 +118,17 @@ Alex Ames
 \end_layout
 
 \begin_layout Abstract
-lorem ipsum?
+Experimental research in fluid mechanics relies heavily on particle image
+ velocimetry, an image processing technique which correlates the positions
+ of particles in two successive images to obtain a velocity field.
+ Conventional approaches to the correlation process rely on matrix multiplicatio
+n or fast Fourier transforms performed on the CPU, requiring processing
+ times from minutes to hours for a single image pair.
+ By adapting a gradient descent method from the computer vision community,
+ calculation of velocity vectors can be accelerated by several orders of
+ magnitude.
+ Further acceleration is enabled by performing computations on the GPU,
+ allowing for image processing times of less than a second.
 \end_layout
 
 \begin_layout Standard
@@ -281,7 +291,7 @@ Convergence can be stymied by local minima and large displacements, both
 \end_layout
 
 \begin_layout Subsection
-FOLKI (Flot Optique Lucas-Kanade Iteratif)
+FOLKI (Iterative Lucas-Kanade Optical Flow)
 \end_layout
 
 \begin_layout Standard
@@ -363,7 +373,7 @@ Several additional adaptations were made to increase the algorithm's accuracy
  Due to the difficulty of accurately computing gradients and Gaussian averaging
  around borders, velocity vectors are subjected to global outlier rejection.
  These adaptations increase the computation time by a factor of 10 or more
- compared to unmodified the Lucas-Kanade method, but they increase the accuracy
+ compared to the unmodified Lucas-Kanade method, but they increase the accuracy
  of the resulting vector fields to a degree surpassing conventional PIV
  algorithms 
 \begin_inset CommandInset citation
@@ -383,7 +393,7 @@ Julia image processing & GPU capabilities
 \begin_inset Float figure
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Plain Layout
 \begin_inset Graphics
@@ -425,10 +435,6 @@ key "gpu-julia-nvidia"
 
 \end_layout
 
-\begin_layout Subsection
-Julia overview
-\end_layout
-
 \begin_layout Standard
 Julia is a recently-released dynamic language with a variety of attractive
  features for scientific computing.
@@ -445,7 +451,7 @@ Julia is a recently-released dynamic language with a variety of attractive
 Thanks to recent efforts by Google developers to allow transpilation from
  LLVM to CUDA PTX, it is also possible to write and interactively dispatch
  CUDA kernels directly in Julia using native syntax.
- This includes code for specialized types such as dual numbers, which allow
+ This includes code for specialized types such as dual numbers, which allows
  for efficient computation of function derivatives through forward-mode
  automatic differentiation.
 \end_layout
@@ -456,7 +462,14 @@ Additionally, Julia has built-in support for calling C/C++/Fortran libraries
  and OpenCL.
 \end_layout
 
-\begin_layout Subsection
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
 Implementing FOLKI in Julia
 \end_layout
 
@@ -479,7 +492,7 @@ et al.
 \end_layout
 
 \begin_layout Standard
-Julia's image processing facilites have undergone heavy development over
+Julia's image processing facilities have undergone heavy development over
  the past several years, and 
 \begin_inset CommandInset href
 LatexCommand href
@@ -530,10 +543,16 @@ sideways false
 status open
 
 \begin_layout Plain Layout
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
 \begin_inset Graphics
 	filename gfx/B001_1.png
 	lyxscale 30
-	width 60col%
+	width 49col%
 
 \end_inset
 
@@ -544,7 +563,88 @@ status open
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
-Synthetic image of particles tracking a strong vortex 
+Particles tracking a strong vortex 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "stanislas2003main"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset space \hfill{}
+\end_inset
+
+
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/B001_1.png
+	lyxscale 30
+	width 49col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Calculated velocity field magnitude
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/caseB-CPIV.png
+	lyxscale 30
+	width 70col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Average of four velocity fields produced by conventional PIV correlators
+ 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "stanislas2003main"
@@ -564,6 +664,68 @@ key "stanislas2003main"
 
 \end_layout
 
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Julia-FOLKI results for synthetic test images
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/error.pdf
+	width 70col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Relative error convergence for 
+\begin_inset Formula $N_{\mathrm{levels}}=3$
+\end_inset
+
+, 
+\begin_inset Formula $N_{\mathrm{iterations}}=10$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Standard
 Although the Julia implementation fell short on GPU acceleration, the naïve,
  single-threaded approach proved both performant and robust, delivering
@@ -572,99 +734,67 @@ Although the Julia implementation fell short on GPU acceleration, the naïve,
  Further attention must be paid to boundary-value handling due to the impossibil
 ity of tracking particles which pass into or out of the field of view between
  the first and second images.
- This a minor difficulty, though, since experimental images frame the region
- of interest in the center of the field of view, allowing velocity field
- values near the borders to be trimmed.
+ This is a minor difficulty, though, since experimental images frame the
+ region of interest in the center of the field of view, allowing spurious
+ velocity vectors near the borders to be discarded.
 \end_layout
 
-\begin_layout Section
-Benchmarking key components
-\end_layout
-
-\begin_layout Itemize
-Per FOLKI iteration, operation counts for:
-\end_layout
-
-\begin_deeper
-\begin_layout Itemize
-Interpolation
-\end_layout
-
-\begin_deeper
-\begin_layout Itemize
-Note: Julia support for hardware image interpolation is still under development,
- per my discussion with the developers: https://github.com/JuliaGPU/OpenCL.jl/issu
-es/28#issuecomment-347974643
-\end_layout
-
-\begin_layout Itemize
-Convolution
-\end_layout
-
-\begin_layout Itemize
-Matrix multiplication
-\end_layout
-
-\end_deeper
-\begin_layout Itemize
-These key operations have been benchmarked with:
-\end_layout
-
-\begin_deeper
-\begin_layout Itemize
-Single-thread
-\end_layout
-
-\begin_layout Itemize
-Julia's threading constructs
-\end_layout
-
-\begin_layout Itemize
-OpenCL-backed array lib
-\end_layout
-
-\begin_layout Itemize
-ArrayFire
-\end_layout
-
-\end_deeper
-\begin_layout Itemize
-I purchased a external PCI-e enclosure to test GPU acc.eleration using a
- R9 270x, but Apple support for external GPUs is still incomplete.
- The device is recognized by the OS, but not by the OpenCL installation
-\end_layout
-
-\end_deeper
 \begin_layout Section
 Conclusions
 \end_layout
 
 \begin_layout Standard
-Due to the intended use of FOLKI as a research tool and the consequent importanc
-e of obtaining accurate results, improvements in robustness and accuracy
- were prioritized over vectorization
-\end_layout
-
-\begin_layout Itemize
-Well, it's fast and super cool, but kinks need to be worked out.
-\end_layout
-
-\begin_deeper
-\begin_layout Itemize
-To paraphrase, 
+Due to the intended use of Julia-FOLKI as a research tool and the consequent
+ importance of obtaining accurate results, improvements in robustness and
+ accuracy were prioritized over GPU acceleration.
+ To paraphrase a quote attributed to Kent Beck, 
 \begin_inset Quotes eld
 \end_inset
 
-make it right, then make it fast
+Make it work, make it right, make it fast
 \begin_inset Quotes erd
 \end_inset
 
 .
- It isn't correct enough yet to be worth optimizing.
- Benchmarks of key functions show ____ speedup should be possible.
+ Unfortunately, I only got as far as 
+\begin_inset Quotes eld
+\end_inset
+
+make it right
+\begin_inset Quotes erd
+\end_inset
+
+, and this project is intended to reveal competence (or lack thereof) in
+ the concepts learned in ME759; I ran out of time to accelerate the computation
+ using OpenCL as originally intended.
+ 
 \end_layout
 
-\end_deeper
+\begin_layout Standard
+However, my doctoral research relies on the results of particle image velocimetr
+y, and development of Julia-FOLKI will continue.
+ Immediately, work is still needed to arrive at reliable choices of parameters
+ for filter sizing, required iterations, and vector validation, but once
+ the algorithm is sufficiently robust to satisfy research needs, further
+ speed-up should be easily within reach.
+ Per profiling of the naïve algorithm, at least 80% of processing time is
+ spent calculating matrix multiplications (both for filter convolution and
+ for the solution of linear systems) and interpolations (for image resampling).
+ Matrix multiplication is readily accelerated using GPU kernels, and many
+ GPUs are capable of hardware-accelerated texture interpolation.
+ Julia's OpenCL binding isn't yet capable of leveraging texture interpretation
+ (
+\begin_inset CommandInset href
+LatexCommand href
+name "I asked"
+target "https://github.com/JuliaGPU/OpenCL.jl/issues/28#issuecomment-347974643"
+
+\end_inset
+
+), but development is ongoing, and Julia-FOLKI should be fully-accelerated
+ within several months.
+\end_layout
+
 \begin_layout Standard
 \begin_inset Newpage pagebreak
 \end_inset

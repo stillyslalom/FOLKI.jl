@@ -32,6 +32,7 @@ has been installed correctly, type `versioninfo(true)` in the Julia prompt.
 The required packages are:
 
 * Images
+* ImageView
 * Interpolations
 * Plots
 * Glob
