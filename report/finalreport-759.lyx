@@ -565,7 +565,16 @@ key "stanislas2003main"
 \end_layout
 
 \begin_layout Standard
-asdf
+Although the Julia implementation fell short on GPU acceleration, the naïve,
+ single-threaded approach proved both performant and robust, delivering
+ displacement fields in a matter of seconds rather the minutes or hours
+ seen with conventional FFT-based algorithms.
+ Further attention must be paid to boundary-value handling due to the impossibil
+ity of tracking particles which pass into or out of the field of view between
+ the first and second images.
+ This a minor difficulty, though, since experimental images frame the region
+ of interest in the center of the field of view, allowing velocity field
+ values near the borders to be trimmed.
 \end_layout
 
 \begin_layout Section

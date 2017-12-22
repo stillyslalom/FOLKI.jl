@@ -21,7 +21,8 @@ function folki(I1raw, I2raw; J=3, N=10, mask=trues(I1raw), w=Kernel.gaussian(4),
 
     I1, I2 = I1raw, I2raw # Float32.(I1raw), Float32.(I2raw)
     P1, P2 = Images.gaussian_pyramid.([I1, I2], J-1, 2, 1.0)
-    # TODO: fix inefficient alloc of u, v
+    # TODO: fix inefficient alloc of U, V
+    # TODO: allow velocity fields to be initialized by input arrays U0, V0
     U, V = Images.gaussian_pyramid.([zeros(I1), zeros(I2)], J-1, 2, 1.0)
     err = zeros(N, J)
 
