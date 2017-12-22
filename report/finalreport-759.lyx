@@ -8,6 +8,31 @@
 \begin_preamble
 \usepackage{physics}
 \addtokomafont{disposition}{\rmfamily}
+\usepackage[bold]{hhtensor}
+
+\usepackage{ifthen}
+\renewenvironment{figure}[1][]{%
+ \ifthenelse{\equal{#1}{}}{%
+   \@float{figure}
+ }{%
+   \@float{figure}[#1]%
+ }%
+ \centering
+}{%
+ \end@float
+}
+
+
+\renewenvironment{table}[1][]{%
+ \ifthenelse{\equal{#1}{}}{%
+   \@float{table}
+ }{%
+   \@float{table}[#1]%
+ }%
+ \centering
+}{%
+ \end@float
+}
 \end_preamble
 \options titlepage, abstract=true
 \use_default_options true
@@ -59,7 +84,7 @@
 \shortcut idx
 \color #008000
 \end_index
-\secnumdepth 0
+\secnumdepth 2
 \tocdepth 3
 \paragraph_separation skip
 \defskip smallskip
@@ -147,8 +172,8 @@ Particle image velocimetry
 \end_layout
 
 \begin_layout Standard
-In recent decades, particle image velocimetry has become an invaluable tool
- for studying the structure and properties of gas and liquid flows.
+In recent decades, particle image velocimetry (PIV) has become an invaluable
+ tool for studying the structure and properties of gas and liquid flows.
  By non-intrusively seeding a flow with a large number of small particles,
  then tracking the particles' displacement through multiple successive image
  frames, accurate velocity fields can be obtained.
@@ -187,95 +212,311 @@ key "pust2000piv"
 Optical flow
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 Computer vision often requires determination of displacement fields between
- video frames for motion detection or whatever
+ successive video frames for motion detection, object segmentation, video
+ compression, and as an aid to 3D reconstruction of the field of view.
+ Although the objective of determining a displacement field is fundamentally
+ the same as PIV, optical flow's computer-vision roots have led to less
+ rigorous algorithms better suited to real-time processing.
+ Among several other approaches, intensity gradient descent methods have
+ become especially popular.
+ 
 \end_layout
 
-\begin_layout Itemize
-Typically less rigorous algorithms than PIV: meant for real-time use with
- any heavy computation offloaded to graphics cards
+\begin_layout Subsection
+Lucas-Kanade method
 \end_layout
 
-\begin_layout Itemize
-Popular method: Lucas-Kanade optical flow
+\begin_layout Standard
+One such method is Lucas-Kanade, which involves solving the following system
+ for 
+\begin_inset Formula $(\vec{U},\vec{V})$
+\end_inset
+
+, where 
+\begin_inset Formula $I$
+\end_inset
+
+ is the intensity at each pixel 
+\begin_inset Formula $q$
+\end_inset
+
+ (with subscripts denoting differentiation):
 \end_layout
 
-\begin_deeper
-\begin_layout Itemize
-outline
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{bmatrix}\vec{I}_{x}(\vec{q}) & \vec{I}_{y}(\vec{q})\end{bmatrix}\begin{bmatrix}\vec{U}\\
+\vec{V}
+\end{bmatrix}=\begin{bmatrix}-\vec{I}_{t}(\vec{q})\end{bmatrix}
+\]
+
+\end_inset
+
+This requires the least-squares solution of a system of two variables at
+ each pixel, with summation over a Gaussian-weighted interrogation window
+ centered around the pixel:
+\begin_inset Formula 
+\[
+\begin{bmatrix}U\\
+V
+\end{bmatrix}=\begin{bmatrix}\sum I_{x}I_{x} & \sum I_{x}I_{y}\\
+\sum I_{y}I_{x} & \sum I_{y}I_{y}
+\end{bmatrix}^{-1}\begin{bmatrix}-\sum I_{x}I_{t}\\
+-\sum I_{y}I_{t}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
 \end_layout
 
-\end_deeper
-\begin_layout Itemize
-Adapted for PIV by Frenchies
+\begin_layout Standard
+Convergence can be stymied by local minima and large displacements, both
+ of which are commonly encountered in particle-seeded flow fields.
+ 
 \end_layout
 
-\begin_deeper
-\begin_layout Itemize
-their results
+\begin_layout Subsection
+FOLKI (Flot Optique Lucas-Kanade Iteratif)
 \end_layout
 
-\end_deeper
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/FOLKI-comparo.png
+	lyxscale 50
+	width 60col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Comparison of root mean square displacement error 
+\begin_inset Formula $U_{\mathrm{RMS}}$
+\end_inset
+
+ versus interrogation window size 
+\begin_inset Formula $r$
+\end_inset
+
+ for FOLKI (F) and conventional FFT-based PIV (C) for several representative
+ test cases 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "champagnat2011fast"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To circumvent the aforementioned issues, a group associated with ONERA,
+ the French aerospace research directorate, developed FOLKI.
+ At its core, FOLKI involves downscaling the input images by a factor of
+ 
+\begin_inset Formula $2^{n}$
+\end_inset
+
+, determining displacement fields at that scale, and mapping the downscaled
+ velocity fields as initial guesses for the next-highest scale.
+ This process is repeated until the desired field resolution is attained.
+ Additionally, the displacement field at each scale is computed iteratively,
+ with the time derivative of image intensity calculated using an advectively-res
+ampled second image.
+\end_layout
+
+\begin_layout Standard
+Several additional adaptations were made to increase the algorithm's accuracy
+ and suitability for PIV images, including computing the sum of squared
+ differences in a time-symmetric fashion, and increasing the robustness
+ to varying illumination by zero-normalizing the mean and standard deviation
+ of each interrogation window's intensity.
+ Due to the difficulty of accurately computing gradients and Gaussian averaging
+ around borders, velocity vectors are subjected to global outlier rejection.
+ These adaptations increase the computation time by a factor of 10 or more
+ compared to unmodified the Lucas-Kanade method, but they increase the accuracy
+ of the resulting vector fields to a degree surpassing conventional PIV
+ algorithms 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "champagnat2011fast"
+
+\end_inset
+
+ while retaining a speedup of several orders of magnitude.
+\end_layout
+
 \begin_layout Section
 Julia image processing & GPU capabilities
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/CUDA_Cpp_vs_Julia.png
+	lyxscale 80
+	width 80col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Performance difference between Julia and C++ kernels on the Rodina benchmark
+ suite using a GTX 1080 and CUDA 8.0.61 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "gpu-julia-nvidia"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
 Julia overview
 \end_layout
 
-\begin_layout Itemize
-Matlab-like syntax, but functions are compiled just ahead of runtime instead
- of being interpreted like Matlab (or Python).
- Sophisticated type system means it's possible to write fast code even for
- user-defined types: don't have to stick to float64 arrays for speed.
+\begin_layout Standard
+Julia is a recently-released dynamic language with a variety of attractive
+ features for scientific computing.
+ The syntax is similar to both Matlab and Python, with a thriving user-driven
+ package ecosystem.
+ Its sophisticated type system allows optimization even for user-defined
+ functions and types; one doesn't need to stick to vectorization or arrays
+ of doubles for speed as with Matlab or Numpy.
+ Underneath the hood, function call chains are transpiled to LLVM/Clang,
+ which produces efficient bytecode for virtually all modern platforms.
 \end_layout
 
-\begin_layout Itemize
-Underneath the hood, function call chains are transpiled to LLVM, which
- can produce fast bytecode for almost any platform
+\begin_layout Standard
+Thanks to recent efforts by Google developers to allow transpilation from
+ LLVM to CUDA PTX, it is also possible to write and interactively dispatch
+ CUDA kernels directly in Julia using native syntax.
+ This includes code for specialized types such as dual numbers, which allow
+ for efficient computation of function derivatives through forward-mode
+ automatic differentiation.
 \end_layout
 
-\begin_layout Itemize
-Thanks to recent efforts by Google to allow transpilation from LLVM to CUDA
- kernels, it's possible to write CUDA kernels directly in Julia.
-\end_layout
-
-\begin_layout Itemize
-Built-in support for calling C/C++/Fortran libraries
-\end_layout
-
-\begin_layout Itemize
-Bindings to the C API for both CUDA and OpenCL are being developed for Julia
+\begin_layout Standard
+Additionally, Julia has built-in support for calling C/C++/Fortran libraries
+ with virtually no overhead, enabling bindings to the C API for both CUDA
+ and OpenCL.
 \end_layout
 
 \begin_layout Subsection
 Implementing FOLKI in Julia
 \end_layout
 
-\begin_layout Itemize
-Chose to use OpenCL due to its availability on virtually all platforms regardles
-s of whether a GPU is installed
+\begin_layout Standard
+The FOLKI algorithm relies heavily on image processing techniques, including
+ convolution, interpolation, and matrix multiplication, and is therefore
+ well-suited to GPU acceleration; Champagnat 
+\emph on
+et al.
+
+\emph default
+ were able to achieve processing rates of up to five image pairs per second
+ with their CUDA implementation.
+ Because of OpenCL's ability to use whatever resources are available (whether
+ CPU, integrated GPU, or discrete GPU), and the heterogeneous nature of
+ the computing platforms for which this implementation is written (personal
+ laptops and desktops as well as lab workstations), OpenCL was chosen as
+ the intended accelerator backend for the present work.
+ 
 \end_layout
 
-\begin_layout Itemize
-It's weird
+\begin_layout Standard
+Julia's image processing facilites have undergone heavy development over
+ the past several years, and 
+\begin_inset CommandInset href
+LatexCommand href
+name "feature parity"
+target "https://juliaimages.github.io/latest/api_comparison.html#Comparison-with-other-image-processing-frameworks-1"
+
+\end_inset
+
+ has been achieved with Matlab and SciPy for most common operations.
+ Despite this, little attention has been paid to GPU acceleration of these
+ operations until quite recently.
+ The intended course of action for FOLKI development in Julia was thus:
 \end_layout
 
-\begin_layout Itemize
-Damn tricky
+\begin_layout Enumerate
+Implement a performant, feature-complete version of the FOLKI algorithm
+ using native image processing libraries
 \end_layout
 
-\begin_layout Itemize
-I got snarled up by implementation details, trying to get realistic vector
- fields.
- Requires extensive validation of input parameters and more-sophisticated
- boundary handling.
+\begin_layout Enumerate
+Identify expensive portions of the computation and accelerate using OpenCL
+ kernels
 \end_layout
 
-\begin_layout Itemize
-See: some results for several synthetic and real-world PIV images
+\begin_layout Enumerate
+Implement the full algorithm using OpenCL kernels written in Julia, mirroring
+ the CUDA effort of Champagnat 
+\emph on
+et al.
+\end_layout
+
+\begin_layout Standard
+However, thanks to Champagnat's description of the algorithm (opaque and
+ short on necessary detail) and various challenges resulting from idiosyncrasies
+ of Julia's image processing library, virtually all development time was
+ devoted to implementing FOLKI in a merely correct fashion, leaving no time
+ for GPU acceleration.
 \end_layout
 
 \begin_layout Subsection
@@ -286,13 +527,13 @@ Results
 \begin_inset Float figure
 wide false
 sideways false
-status collapsed
+status open
 
 \begin_layout Plain Layout
 \begin_inset Graphics
-	filename /Users/alexames/Dropbox/College/759--finalproject/raw/piv1B/B001_1.tif
+	filename gfx/B001_1.png
 	lyxscale 30
-	width 80col%
+	width 60col%
 
 \end_inset
 
@@ -321,6 +562,10 @@ key "stanislas2003main"
 \end_inset
 
 
+\end_layout
+
+\begin_layout Standard
+asdf
 \end_layout
 
 \begin_layout Section
@@ -385,6 +630,12 @@ I purchased a external PCI-e enclosure to test GPU acc.eleration using a
 Conclusions
 \end_layout
 
+\begin_layout Standard
+Due to the intended use of FOLKI as a research tool and the consequent importanc
+e of obtaining accurate results, improvements in robustness and accuracy
+ were prioritized over vectorization
+\end_layout
+
 \begin_layout Itemize
 Well, it's fast and super cool, but kinks need to be worked out.
 \end_layout
@@ -405,6 +656,13 @@ make it right, then make it fast
 \end_layout
 
 \end_deeper
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
 \begin_layout Standard
 \begin_inset CommandInset bibtex
 LatexCommand bibtex

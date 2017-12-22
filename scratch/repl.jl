@@ -1,5 +1,8 @@
-using FileIO, Glob, ImageView
+using FileIO, Glob, ImageView, ImageFiltering
 import Plots: plot, pdf
+
+include("../src/folki-cpu.jl")
+using FOLKI
 
 rawdir = normpath((@__DIR__)*"/../raw/piv1B/")
 rawpaths = glob("B002*tif", rawdir)
@@ -9,4 +12,3 @@ U, V, err = folki(I1, I2; J = 3, N = 10, w = Kernel.gaussian(3))
 
 plot(err)
 imshow(U[3])
-imshow(sqrt(U[1].^2 + V[1].^2))

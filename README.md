@@ -19,5 +19,23 @@ adapted for the unique illumination characteristics of PIV images.
     * Solve 2x2 system $u = H\\c$ for each pixel
   * Upsample estimated displacement field to match the resolution of the next level
 
-Several adaptations are made to increase the suitability of FOLKI for PIV:
-* 
+### How is it run?
+A working Julia installation is required: download the latest release for your
+platform [here](https://julialang.org/downloads/).
+If you'd rather not install anything, you can register for a
+[JuliaBox account](https://www.juliabox.com),
+which gives you free access to a remotely-managed Julia environment.
+
+Several additional packages must also be installed; this is done by entering
+the Julia command-line and typing `Pkg.add("packagename")`. To be sure everything
+has been installed correctly, type `versioninfo(true)` in the Julia prompt.
+The required packages are:
+
+* Images
+* Interpolations
+* Plots
+* Glob
+
+Once the environment is properly configured, the code can be run by navigating
+to the `scratch/` directory and running `include("repl.jl")`
+from the Julia prompt.

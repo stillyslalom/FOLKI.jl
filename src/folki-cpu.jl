@@ -1,5 +1,7 @@
 module FOLKI
+
 using Images, ImageFiltering, Interpolations
+export folki
 
 medianwindow(img,n) = mapwindow(median, img, (n,n))
 
@@ -45,7 +47,7 @@ function folki(I1raw, I2raw; J=3, N=10, mask=trues(I1raw), w=Kernel.gaussian(4),
             @. u = (iyy*ixt - ixy*iyt)/d
             @. v = (ixx*iyt - ixy*ixt)/d
 
-            err[n, j] = vecnorm(u - u_old) + vecnorm(v - v_old)
+            err[n, j] = (vecnorm(u - u_old) + vecnorm(v - v_old))/length(u)
 
             # Outlier rejection
             # Set infinite & NaN values to zero
