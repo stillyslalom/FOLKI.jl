@@ -1,0 +1,817 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass scrartcl
+\begin_preamble
+\usepackage{physics}
+\addtokomafont{disposition}{\rmfamily}
+\usepackage[bold]{hhtensor}
+
+\usepackage{ifthen}
+\renewenvironment{figure}[1][]{%
+ \ifthenelse{\equal{#1}{}}{%
+   \@float{figure}
+ }{%
+   \@float{figure}[#1]%
+ }%
+ \centering
+}{%
+ \end@float
+}
+
+
+\renewenvironment{table}[1][]{%
+ \ifthenelse{\equal{#1}{}}{%
+   \@float{table}
+ }{%
+   \@float{table}[#1]%
+ }%
+ \centering
+}{%
+ \end@float
+}
+\end_preamble
+\options titlepage, abstract=true
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "times" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize 11
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 2
+\tocdepth 3
+\paragraph_separation skip
+\defskip smallskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+GPU-Accelerated Particle Image Velocimetry
+\end_layout
+
+\begin_layout Subject
+ME759 Final Project Report
+\begin_inset Newline newline
+\end_inset
+
+University of Wisconsin-Madison
+\end_layout
+
+\begin_layout Author
+Alex Ames
+\end_layout
+
+\begin_layout Abstract
+Experimental research in fluid mechanics relies heavily on particle image
+ velocimetry, an image processing technique which correlates the positions
+ of particles in two successive images to obtain a velocity field.
+ Conventional approaches to the correlation process rely on matrix multiplicatio
+n or fast Fourier transforms performed on the CPU, requiring processing
+ times from minutes to hours for a single image pair.
+ By adapting a gradient descent method from the computer vision community,
+ calculation of velocity vectors can be accelerated by several orders of
+ magnitude.
+ Further acceleration is enabled by performing computations on the GPU,
+ allowing for image processing times of less than a second.
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+thispagestyle{empty}
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+clearpage
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+pagenumbering{arabic}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage newpage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Particle image velocimetry
+\end_layout
+
+\begin_layout Standard
+In recent decades, particle image velocimetry (PIV) has become an invaluable
+ tool for studying the structure and properties of gas and liquid flows.
+ By non-intrusively seeding a flow with a large number of small particles,
+ then tracking the particles' displacement through multiple successive image
+ frames, accurate velocity fields can be obtained.
+ Although the technique was developed in the era of film cameras, with photograp
+hic negatives digitized and then processed, PIV has come into its own with
+ the widespread availability of digital cameras.
+ 
+\end_layout
+
+\begin_layout Standard
+Traditional PIV algorithms work by dividing the images into a grid of sub-images
+, then finding the inter-image displacements which maximize the correlation
+ between each pair of sub-images.
+ The simplest method of determining correlations is performing matrix multiplica
+tion of the sub-image pairs at every possible displacement (with appropriate
+ boundary padding), but this approach can require several hours of processing
+ time for a single image pair.
+ More sophisticated approaches use fast Fourier transform (FFT) routines
+ to determine correlations in a matter of minutes, but the resultant velocity
+ fields exhibit a phenomenon known as peak-locking due to single-pixel particles
+, decreasing their accuracy 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "pust2000piv"
+
+\end_inset
+
+.
+ To improve the resolution of the output velocity field, PIV algorithms
+ typically overlap the search boxes and recursively decrease the searched
+ area, using velocity fields from previous iterations to warp the second
+ image
+\end_layout
+
+\begin_layout Section
+Optical flow
+\end_layout
+
+\begin_layout Standard
+Computer vision often requires determination of displacement fields between
+ successive video frames for motion detection, object segmentation, video
+ compression, and as an aid to 3D reconstruction of the field of view.
+ Although the objective of determining a displacement field is fundamentally
+ the same as PIV, optical flow's computer-vision roots have led to less
+ rigorous algorithms better suited to real-time processing.
+ Among several other approaches, intensity gradient descent methods have
+ become especially popular.
+ 
+\end_layout
+
+\begin_layout Subsection
+Lucas-Kanade method
+\end_layout
+
+\begin_layout Standard
+One such method is Lucas-Kanade, which involves solving the following system
+ for 
+\begin_inset Formula $(\vec{U},\vec{V})$
+\end_inset
+
+, where 
+\begin_inset Formula $I$
+\end_inset
+
+ is the intensity at each pixel 
+\begin_inset Formula $q$
+\end_inset
+
+ (with subscripts denoting differentiation):
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{bmatrix}\vec{I}_{x}(\vec{q}) & \vec{I}_{y}(\vec{q})\end{bmatrix}\begin{bmatrix}\vec{U}\\
+\vec{V}
+\end{bmatrix}=\begin{bmatrix}-\vec{I}_{t}(\vec{q})\end{bmatrix}
+\]
+
+\end_inset
+
+This requires the least-squares solution of a system of two variables at
+ each pixel, with summation over a Gaussian-weighted interrogation window
+ centered around the pixel:
+\begin_inset Formula 
+\[
+\begin{bmatrix}U\\
+V
+\end{bmatrix}=\begin{bmatrix}\sum I_{x}I_{x} & \sum I_{x}I_{y}\\
+\sum I_{y}I_{x} & \sum I_{y}I_{y}
+\end{bmatrix}^{-1}\begin{bmatrix}-\sum I_{x}I_{t}\\
+-\sum I_{y}I_{t}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Convergence can be stymied by local minima and large displacements, both
+ of which are commonly encountered in particle-seeded flow fields.
+ 
+\end_layout
+
+\begin_layout Subsection
+FOLKI (Iterative Lucas-Kanade Optical Flow)
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/FOLKI-comparo.png
+	lyxscale 50
+	width 60col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Comparison of root mean square displacement error 
+\begin_inset Formula $U_{\mathrm{RMS}}$
+\end_inset
+
+ versus interrogation window size 
+\begin_inset Formula $r$
+\end_inset
+
+ for FOLKI (F) and conventional FFT-based PIV (C) for several representative
+ test cases 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "champagnat2011fast"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To circumvent the aforementioned issues, a group associated with ONERA,
+ the French aerospace research directorate, developed FOLKI.
+ At its core, FOLKI involves downscaling the input images by a factor of
+ 
+\begin_inset Formula $2^{n}$
+\end_inset
+
+, determining displacement fields at that scale, and mapping the downscaled
+ velocity fields as initial guesses for the next-highest scale.
+ This process is repeated until the desired field resolution is attained.
+ Additionally, the displacement field at each scale is computed iteratively,
+ with the time derivative of image intensity calculated using an advectively-res
+ampled second image.
+\end_layout
+
+\begin_layout Standard
+Several additional adaptations were made to increase the algorithm's accuracy
+ and suitability for PIV images, including computing the sum of squared
+ differences in a time-symmetric fashion, and increasing the robustness
+ to varying illumination by zero-normalizing the mean and standard deviation
+ of each interrogation window's intensity.
+ Due to the difficulty of accurately computing gradients and Gaussian averaging
+ around borders, velocity vectors are subjected to global outlier rejection.
+ These adaptations increase the computation time by a factor of 10 or more
+ compared to the unmodified Lucas-Kanade method, but they increase the accuracy
+ of the resulting vector fields to a degree surpassing conventional PIV
+ algorithms 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "champagnat2011fast"
+
+\end_inset
+
+ while retaining a speedup of several orders of magnitude.
+\end_layout
+
+\begin_layout Section
+Julia image processing & GPU capabilities
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/CUDA_Cpp_vs_Julia.png
+	lyxscale 80
+	width 80col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Performance difference between Julia and C++ kernels on the Rodina benchmark
+ suite using a GTX 1080 and CUDA 8.0.61 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "gpu-julia-nvidia"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Julia is a recently-released dynamic language with a variety of attractive
+ features for scientific computing.
+ The syntax is similar to both Matlab and Python, with a thriving user-driven
+ package ecosystem.
+ Its sophisticated type system allows optimization even for user-defined
+ functions and types; one doesn't need to stick to vectorization or arrays
+ of doubles for speed as with Matlab or Numpy.
+ Underneath the hood, function call chains are transpiled to LLVM/Clang,
+ which produces efficient bytecode for virtually all modern platforms.
+\end_layout
+
+\begin_layout Standard
+Thanks to recent efforts by Google developers to allow transpilation from
+ LLVM to CUDA PTX, it is also possible to write and interactively dispatch
+ CUDA kernels directly in Julia using native syntax.
+ This includes code for specialized types such as dual numbers, which allows
+ for efficient computation of function derivatives through forward-mode
+ automatic differentiation.
+\end_layout
+
+\begin_layout Standard
+Additionally, Julia has built-in support for calling C/C++/Fortran libraries
+ with virtually no overhead, enabling bindings to the C API for both CUDA
+ and OpenCL.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Implementing FOLKI in Julia
+\end_layout
+
+\begin_layout Standard
+The FOLKI algorithm relies heavily on image processing techniques, including
+ convolution, interpolation, and matrix multiplication, and is therefore
+ well-suited to GPU acceleration; Champagnat 
+\emph on
+et al.
+
+\emph default
+ were able to achieve processing rates of up to five image pairs per second
+ with their CUDA implementation.
+ Because of OpenCL's ability to use whatever resources are available (whether
+ CPU, integrated GPU, or discrete GPU), and the heterogeneous nature of
+ the computing platforms for which this implementation is written (personal
+ laptops and desktops as well as lab workstations), OpenCL was chosen as
+ the intended accelerator backend for the present work.
+ 
+\end_layout
+
+\begin_layout Standard
+Julia's image processing facilities have undergone heavy development over
+ the past several years, and 
+\begin_inset CommandInset href
+LatexCommand href
+name "feature parity"
+target "https://juliaimages.github.io/latest/api_comparison.html#Comparison-with-other-image-processing-frameworks-1"
+
+\end_inset
+
+ has been achieved with Matlab and SciPy for most common operations.
+ Despite this, little attention has been paid to GPU acceleration of these
+ operations until quite recently.
+ The intended course of action for FOLKI development in Julia was thus:
+\end_layout
+
+\begin_layout Enumerate
+Implement a performant, feature-complete version of the FOLKI algorithm
+ using native image processing libraries
+\end_layout
+
+\begin_layout Enumerate
+Identify expensive portions of the computation and accelerate using OpenCL
+ kernels
+\end_layout
+
+\begin_layout Enumerate
+Implement the full algorithm using OpenCL kernels written in Julia, mirroring
+ the CUDA effort of Champagnat 
+\emph on
+et al.
+\end_layout
+
+\begin_layout Standard
+However, thanks to Champagnat's description of the algorithm (opaque and
+ short on necessary detail) and various challenges resulting from idiosyncrasies
+ of Julia's image processing library, virtually all development time was
+ devoted to implementing FOLKI in a merely correct fashion, leaving no time
+ for GPU acceleration.
+\end_layout
+
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/B001_1.png
+	lyxscale 30
+	width 49col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Particles tracking a strong vortex 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "stanislas2003main"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset space \hfill{}
+\end_inset
+
+
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/B001_1.png
+	lyxscale 30
+	width 49col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Calculated velocity field magnitude
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/caseB-CPIV.png
+	lyxscale 30
+	width 70col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Average of four velocity fields produced by conventional PIV correlators
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "stanislas2003main"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Julia-FOLKI results for synthetic test images
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename gfx/error.pdf
+	width 70col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Relative error convergence for 
+\begin_inset Formula $N_{\mathrm{levels}}=3$
+\end_inset
+
+, 
+\begin_inset Formula $N_{\mathrm{iterations}}=10$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Although the Julia implementation fell short on GPU acceleration, the naïve,
+ single-threaded approach proved both performant and robust, delivering
+ displacement fields in a matter of seconds rather the minutes or hours
+ seen with conventional FFT-based algorithms.
+ Further attention must be paid to boundary-value handling due to the impossibil
+ity of tracking particles which pass into or out of the field of view between
+ the first and second images.
+ This is a minor difficulty, though, since experimental images frame the
+ region of interest in the center of the field of view, allowing spurious
+ velocity vectors near the borders to be discarded.
+\end_layout
+
+\begin_layout Section
+Conclusions
+\end_layout
+
+\begin_layout Standard
+Due to the intended use of Julia-FOLKI as a research tool and the consequent
+ importance of obtaining accurate results, improvements in robustness and
+ accuracy were prioritized over GPU acceleration.
+ To paraphrase a quote attributed to Kent Beck, 
+\begin_inset Quotes eld
+\end_inset
+
+Make it work, make it right, make it fast
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Unfortunately, I only got as far as 
+\begin_inset Quotes eld
+\end_inset
+
+make it right
+\begin_inset Quotes erd
+\end_inset
+
+, and this project is intended to reveal competence (or lack thereof) in
+ the concepts learned in ME759; I ran out of time to accelerate the computation
+ using OpenCL as originally intended.
+ 
+\end_layout
+
+\begin_layout Standard
+However, my doctoral research relies on the results of particle image velocimetr
+y, and development of Julia-FOLKI will continue.
+ Immediately, work is still needed to arrive at reliable choices of parameters
+ for filter sizing, required iterations, and vector validation, but once
+ the algorithm is sufficiently robust to satisfy research needs, further
+ speed-up should be easily within reach.
+ Per profiling of the naïve algorithm, at least 80% of processing time is
+ spent calculating matrix multiplications (both for filter convolution and
+ for the solution of linear systems) and interpolations (for image resampling).
+ Matrix multiplication is readily accelerated using GPU kernels, and many
+ GPUs are capable of hardware-accelerated texture interpolation.
+ Julia's OpenCL binding isn't yet capable of leveraging texture interpretation
+ (
+\begin_inset CommandInset href
+LatexCommand href
+name "I asked"
+target "https://github.com/JuliaGPU/OpenCL.jl/issues/28#issuecomment-347974643"
+
+\end_inset
+
+), but development is ongoing, and Julia-FOLKI should be fully-accelerated
+ within several months.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "bibliography"
+options "IEEEtran"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
