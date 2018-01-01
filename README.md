@@ -14,9 +14,9 @@ adapted for the unique illumination characteristics of PIV images.
   * Compute spatial intensity gradient of initial image
   * Compute 2x2 minimization matrices $H$ for each pixel
   * Iteratively:
-    * Compute deformed image intensity from prior displacement estimate $u_0$
-    * Compute RHS vector $c = (\Delta (I) - \nabla I u_0) \nabla I)$
-    * Solve 2x2 system $u = H\\c$ for each pixel
+    * Compute deformed image intensity from prior displacement estimate u₀
+    * Compute RHS vector c = (ΔI - ∇I u₀) ∇I
+    * Solve 2x2 system u = H\\c for each pixel
   * Upsample estimated displacement field to match the resolution of the next level
 
 ### How is it run?
